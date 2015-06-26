@@ -50,7 +50,7 @@ for deb in "$dest"/*.deb; do
     dpkg -x "$deb" "$dest/x"
 done
 
-case :$LD_LIBRARY_PATH: in
+case :${LD_LIBRARY_PATH-}: in
  *:"$dest/x/lib:$dest/x/usr/lib":*) ;;
  *) echo "${0##*/}: \
 Your LD_LIBRARY_PATH does not contain the virtualdebs lib directory.
