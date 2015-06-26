@@ -5,6 +5,7 @@
 #  apt-get
 #  wget
 #  dpkg
+#  virtualenv (duh)
 
 set -e -u
 
@@ -47,7 +48,9 @@ sed -n "s!.*'\(http://[^' ]*\.deb\)'.*!\1!p" |
 xargs -r wget -nv -nc -P "$dest"
 
 for deb in "$dest"/*.deb; do
+    test -e "$dest/.${deb#$dest/}" && continue
     dpkg -x "$deb" "$dest/x"
+    touch "$dest/.${deb#$dest/}"
 done
 
 case :${LD_LIBRARY_PATH-}: in
