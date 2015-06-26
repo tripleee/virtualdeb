@@ -1,0 +1,66 @@
+#!/bin/sh
+#
+# Depends:
+#  fakeroot
+#  apt-get
+#  wget
+#  dpkg
+
+set -e -u
+
+case $VIRTUAL_ENV in
+ '')
+    virtualenv=$1
+    shift ;;
+ *) virtualenv=$VIRTUAL_ENV ;;
+esac
+
+case $# in 0) set -- --help;; esac
+case $1 in
+ --help | -[h?] )
+    cat <<____HERE
+Syntax: $0 [ virtualenv ] deb-packages ...
+  Attempt to install the listed deb packages locally into the virtualenv.
+  If \$VIRTUAL_ENV is set ${VIRTUAL_ENV+(currently '$VIRTUAL_ENV')}, use that
+  instead of requiring an explicit virtualenv to be identified.
+
+  THIS IS EXPERIMENTAL and only works for very simple libraries.  It will
+  not run the package postinst scripts or otherwise perform any proper
+  installation; the files in the deb are simply extracted into place.
+
+____HERE
+    exit 0 ;;
+ -*)
+    echo "${0##*/}: Unknown option '$1' -- aborting" >&2
+    exit 1 ;;
+esac
+
+test -e "$virtualenv/bin/activate" ||
+{ echo "${0##*/}: '$virtualenv' does not appear to be a virtualenv" >&2
+  exit 2; }
+
+dest=$virtualenv/virtualdebs
+mkdir -p "$dest/x"
+
+fakeroot apt-get install -y --print-uris "$@" |
+sed -n "s!.*'\(http://[^' ]*\.deb\)'.*!\1!p" |
+xargs -r wget -nv -nc -P "$dest"
+
+for deb in "$dest"/*.deb; do
+    dpkg -x "$deb" "$dest/x"
+done
+
+case :$LD_LIBRARY_PATH: in
+ *:"$dest/x/lib:$dest/x/usr/lib":*) ;;
+ *) echo "${0##*/}: \
+Your LD_LIBRARY_PATH does not contain the virtualdebs lib directory.
+${LD_LIBRARY_PATH+
+Current value:
+  $LD_LIBRARY_PATH
+}
+Perhaps add
+
+  export LD_LIBRARY_PATH=$dest/x/lib:$dest/x/usr/lib\${LD_LIBRARY_PATH+:\$LD_LIBRARY_PATH}
+
+to the end of your $virtualenv/bin/activate script?" >&2 ;;
+esac
