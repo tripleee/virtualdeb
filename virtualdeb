@@ -53,8 +53,13 @@ for deb in "$dest"/*.deb; do
     touch "$dest/.${deb#$dest/}"
 done
 
+######## FIXME: quick and dirty; should support every possible architecture
+# See https://wiki.debian.org/Multiarch/Tuples
+multiarch_suffix="/$(uname -m)-linux-gnu"
+test -d "$dest/x/usr/lib$multiarch_suffix" || multiarch_suffix=''
+
 case :${LD_LIBRARY_PATH-}: in
- *:"$dest/x/lib:$dest/x/usr/lib":*) ;;
+ *:"$dest/x/lib${multiarch_suffix-}:$dest/x/usr/lib${multiarch_suffix-}":*) ;;
  *) echo "${0##*/}: \
 Your LD_LIBRARY_PATH does not contain the virtualdebs lib directory.
 ${LD_LIBRARY_PATH+
@@ -63,7 +68,7 @@ Current value:
 }
 Perhaps add
 
-  export LD_LIBRARY_PATH=$dest/x/lib:$dest/x/usr/lib\${LD_LIBRARY_PATH+:\$LD_LIBRARY_PATH}
+  export LD_LIBRARY_PATH=$dest/x/lib${multiarch_suffix-}:$dest/x/usr/lib${multiarch_suffix-}${multiarch_suffix:+:$dest/x/lib:$dest/x/usr/lib}\${LD_LIBRARY_PATH+:\$LD_LIBRARY_PATH}
 
 to the end of your $virtualenv/bin/activate script?" >&2 ;;
 esac
