@@ -9,6 +9,8 @@
 
 set -e -u
 
+me=${0##*/}
+
 case $VIRTUAL_ENV in
  '')
     virtualenv=$1
@@ -20,7 +22,7 @@ case $# in 0) set -- --help;; esac
 case $1 in
  --help | -[h?] )
     cat <<____HERE
-Syntax: $0 [ virtualenv ] deb-packages ...
+Syntax: $me [ virtualenv ] deb-packages ...
   Attempt to install the listed deb packages locally into the virtualenv.
   If \$VIRTUAL_ENV is set ${VIRTUAL_ENV+(currently '$VIRTUAL_ENV')}, use that
   instead of requiring an explicit virtualenv to be identified.
@@ -32,20 +34,29 @@ Syntax: $0 [ virtualenv ] deb-packages ...
 ____HERE
     exit 0 ;;
  -*)
-    echo "${0##*/}: Unknown option '$1' -- aborting" >&2
+    echo "$me: Unknown option '$1' -- aborting" >&2
     exit 1 ;;
 esac
 
 test -e "$virtualenv/bin/activate" ||
-{ echo "${0##*/}: '$virtualenv' does not appear to be a virtualenv" >&2
+{ echo "$me: '$virtualenv' does not appear to be a virtualenv" >&2
   exit 2; }
 
 dest=$virtualenv/virtualdebs
 mkdir -p "$dest/x"
 
-fakeroot apt-get install -y --print-uris "$@" |
-sed -n "s!.*'\(http://[^' ]*\.deb\)'.*!\1!p" |
-xargs -r wget -nv -nc -P "$dest"
+for package; do
+    case $package in
+     *.deb )
+        cp "$package" "$dest" ;;
+     */* | -* | *.* )
+        echo "$me: '$package' seems invalid -- skipping" >&2 ;;
+     *)
+        fakeroot apt-get install -y --print-uris "$@" |
+        sed -n "s!.*'\(http://[^' ]*\.deb\)'.*!\1!p" |
+        xargs -r wget -nv -nc -P "$dest" ;;
+    esac
+done
 
 for deb in "$dest"/*.deb; do
     test -e "$dest/.${deb#$dest/}" && continue
@@ -60,7 +71,7 @@ test -d "$dest/x/usr/lib$multiarch_suffix" || multiarch_suffix=''
 
 case :${LD_LIBRARY_PATH-}: in
  *:"$dest/x/lib${multiarch_suffix-}:$dest/x/usr/lib${multiarch_suffix-}":*) ;;
- *) echo "${0##*/}: \
+ *) echo "$me: \
 Your LD_LIBRARY_PATH does not contain the virtualdebs lib directory.
 ${LD_LIBRARY_PATH+
 Current value:
