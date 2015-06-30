@@ -52,12 +52,15 @@ for package; do
      *.deb )
         cp "$package" "$dest" ;;
      */* | -* | *.* )
-        echo "$me: '$package' seems invalid -- skipping" >&2 ;;
+        echo "$me: '$package' seems invalid -- skipping" >&2
+	continue ;;
      *)
         fakeroot apt-get install -y --print-uris "$@" |
         sed -n "s!.*'\(http://[^' ]*\.deb\)'.*!\1!p" |
         xargs -r wget -nv -nc -P "$dest" ;;
     esac
+    printf "# %s %i (%s)\n%s\n" "$USER" "$(date +%s)" "$(date)" \
+	"$package" >>"$dest/transcript.txt"
 done
 
 for deb in "$dest"/*.deb; do
