@@ -47,6 +47,8 @@ mkdir -p "$dest/x"
 
 for package; do
     case $package in
+     http://*.deb | https://*.deb | ftp://*.deb )
+	wget -nv -nc -P "$dest" "$package" ;;
      *.deb )
         cp "$package" "$dest" ;;
      */* | -* | *.* )
