@@ -69,9 +69,32 @@ for deb in "$dest"/*.deb; do
     touch "$dest/.${deb#$dest/}"
 done
 
+
 ######## FIXME: quick and dirty; should support every possible architecture
 # See https://wiki.debian.org/Multiarch/Tuples
 multiarch_suffix="/$(uname -m)-linux-gnu"
+
+if ! grep -q -F '### virtualdeb' "$virtualenv/bin/activate"; then
+    sed -i.orig -e '/unset VIRTUAL_ENV/i\
+\
+    ### virtualdeb\
+    case $_OLD_VIRTUAL_LDLPATH in\
+      "<unset>" ) unset LD_LIBRARY_PATH ;; \
+      *) LD_LIBRARY_PATH=$_OLD_VIRTUAL_LDLPATH ;;\
+    esac\
+    unset _OLD_VIRTUAL_LDLPATH\
+' -e "/export VIRTUAL_ENV/a\\
+\\
+### virtualdeb\\
+_OLD_VIRTUAL_LDLPATH=\"\${LD_LIBRARY_PATH-<unset>}\"\\
+LD_LIBRARY_PATH=\"$dest/x/lib${multiarch_suffix-}:\
+$dest/x/usr/lib${multiarch_suffix-}\
+${multiarch_suffix:+:$dest/x/lib:$dest/x/usr/lib}\
+\${LD_LIBRARY_PATH+:\$LD_LIBRARY_PATH}\"\\
+export LD_LIBRARY_PATH" "$virtualenv/bin/activate"
+fi
+
+
 test -d "$dest/x/usr/lib$multiarch_suffix" || multiarch_suffix=''
 
 case :${LD_LIBRARY_PATH-}: in
@@ -82,9 +105,7 @@ ${LD_LIBRARY_PATH+
 Current value:
   $LD_LIBRARY_PATH
 }
-Perhaps add
+Simply 'activate' your virtualenv anew, or run the following command.
 
-  export LD_LIBRARY_PATH=$dest/x/lib${multiarch_suffix-}:$dest/x/usr/lib${multiarch_suffix-}${multiarch_suffix:+:$dest/x/lib:$dest/x/usr/lib}\${LD_LIBRARY_PATH+:\$LD_LIBRARY_PATH}
-
-to the end of your $virtualenv/bin/activate script?" >&2 ;;
+  export LD_LIBRARY_PATH=$dest/x/lib${multiarch_suffix-}:$dest/x/usr/lib${multiarch_suffix-}${multiarch_suffix:+:$dest/x/lib:$dest/x/usr/lib}\${LD_LIBRARY_PATH+:\$LD_LIBRARY_PATH}" >&2 ;;
 esac
